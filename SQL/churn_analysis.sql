@@ -226,4 +226,65 @@ SELECT
 FROM churn_segments
 ORDER BY churn_rank;
 
+
+WITH tenure_analysis AS (
+    SELECT
+        CASE
+            WHEN tenure <= 12 THEN '0-12 Months'
+            WHEN tenure <= 24 THEN '13-24 Months'
+            WHEN tenure <= 48 THEN '25-48 Months'
+            WHEN tenure <= 60 THEN '49-60 Months'
+            ELSE '61-72 Months'
+        END AS tenure_group,
+
+        COUNT(*) AS total_customers,
+
+        SUM(CASE
+            WHEN Churn = 'Yes' THEN 1
+            ELSE 0
+        END) AS churned_customers,
+
+        ROUND(
+            SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END)
+            * 100.0 / COUNT(*),
+            2
+        ) AS churn_rate
+
+    FROM customer_churn
+    GROUP BY tenure_group
+)
+
+SELECT
+    *,
+    DENSE_RANK() OVER (ORDER BY churn_rate DESC) AS churn_rank
+FROM tenure_analysis
+ORDER BY churn_rank;
+
+SELECT
+    COUNT(*) AS total_customers,
+
+    SUM(CASE WHEN PhoneService = 'Yes' THEN 1 ELSE 0 END) AS phone_service_customers,
+    SUM(CASE WHEN MultipleLines = 'Yes' THEN 1 ELSE 0 END) AS multiple_lines_customers,
+    SUM(CASE WHEN OnlineSecurity = 'Yes' THEN 1 ELSE 0 END) AS online_security_customers,
+    SUM(CASE WHEN OnlineBackup = 'Yes' THEN 1 ELSE 0 END) AS online_backup_customers,
+    SUM(CASE WHEN TechSupport = 'Yes' THEN 1 ELSE 0 END) AS tech_support_customers,
+
+    SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS total_churned,
+
+    SUM(CASE WHEN Churn = 'Yes' AND PhoneService = 'Yes' THEN 1 ELSE 0 END) AS phone_service_churned,
+    SUM(CASE WHEN Churn = 'Yes' AND OnlineSecurity = 'Yes' THEN 1 ELSE 0 END) AS online_security_churned,
+    SUM(CASE WHEN Churn = 'Yes' AND TechSupport = 'Yes' THEN 1 ELSE 0 END) AS tech_support_churned
+
+FROM customer_churn;
+
+
+SELECT
+    Churn,
+    COUNT(*) AS total_customers,
+    ROUND(SUM(TotalCharges), 2) AS total_charges,
+    ROUND(AVG(TotalCharges), 2) AS average_total_charges,
+    ROUND(SUM(MonthlyCharges), 2) AS total_monthly_charges,
+    ROUND(AVG(MonthlyCharges), 2) AS average_monthly_charges
+FROM customer_churn
+GROUP BY Churn;
 SHOW TABLES;
